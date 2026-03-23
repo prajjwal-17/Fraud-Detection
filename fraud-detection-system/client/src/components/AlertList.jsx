@@ -28,7 +28,7 @@ export const AlertList = ({ alerts, loading = false }) => (
         : null}
       {!loading &&
         alerts.map((alert) => (
-          <div key={alert.id || alert.transactionId} className="flex items-start gap-3 rounded-lg border border-line px-3 py-2.5">
+          <div key={alert.id || alert.transactionId} className="flex items-start gap-3 rounded-lg border border-line bg-white px-3 py-3 shadow-sm">
             <div className={`mt-0.5 ${decisionTone[alert.decision]}`}>
               {alert.decision === "FRAUD" ? <AlertCircle size={16} /> : <BellRing size={16} />}
             </div>
@@ -39,9 +39,27 @@ export const AlertList = ({ alerts, loading = false }) => (
                 </p>
                 <span className="shrink-0 text-xs text-muted">{formatTime(alert.createdAt)}</span>
               </div>
-              <p className="mt-1 text-xs text-muted">
-                {alert.decision} | Risk {alert.finalRiskScore}
-              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-600">
+                  {alert.decision}
+                </span>
+                {alert.priority ? (
+                  <span
+                    className={`rounded-full px-2 py-1 text-[11px] font-medium ${
+                      alert.priority === "CRITICAL"
+                        ? "bg-red-50 text-red-700"
+                        : alert.priority === "HIGH"
+                          ? "bg-orange-50 text-orange-700"
+                          : alert.priority === "MEDIUM"
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {alert.priority}
+                  </span>
+                ) : null}
+                <span className="text-xs text-muted">Risk {alert.finalRiskScore}</span>
+              </div>
             </div>
           </div>
         ))}
