@@ -432,4 +432,4 @@ The project has been verified locally with:
 
 ## Screenshots
 
-You can add screenshots to [docs](C:\Users\prajj\Documents\New project\docs) and link them here later once you capture final UI shots.
+Will be added to [docs] and linked here later once final ui is captured.
