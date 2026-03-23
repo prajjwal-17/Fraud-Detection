@@ -1,10 +1,21 @@
-import { Activity, Bell, ChevronLeft, CreditCard, LayoutDashboard, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  Bell,
+  BriefcaseBusiness,
+  ChevronLeft,
+  CreditCard,
+  LayoutDashboard,
+  ReceiptText,
+  ShieldCheck
+} from "lucide-react";
 
 const items = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "cases", label: "Cases", icon: BriefcaseBusiness },
   { id: "transactions", label: "Transactions", icon: CreditCard },
   { id: "alerts", label: "Alerts", icon: Bell },
-  { id: "analytics", label: "Analytics", icon: Activity }
+  { id: "analytics", label: "Analytics", icon: Activity },
+  { id: "audit", label: "Audit Trail", icon: ReceiptText }
 ];
 
 export const Sidebar = ({ collapsed, onToggle, activeItem = "dashboard", onNavigate }) => (

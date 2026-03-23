@@ -16,6 +16,12 @@ export const TransactionControls = ({
   simulating
 }) => {
   const [activeTab, setActiveTab] = useState("automated");
+  const [autoForm, setAutoForm] = useState({
+    amount: 8500,
+    burstCount: 3,
+    locationJumpDistance: 0,
+    deviceChange: false
+  });
   const [manualForm, setManualForm] = useState({
     senderId: selectedSenderId || "",
     receiverId: selectedReceiverId || "",
@@ -34,28 +40,21 @@ export const TransactionControls = ({
     [users, manualForm.senderId]
   );
 
+  useEffect(() => {
+    if (!manualForm.senderId && selectedSenderId) {
+      setManualForm((current) => ({ ...current, senderId: selectedSenderId }));
+    }
+    if (!manualForm.receiverId && selectedReceiverId) {
+      setManualForm((current) => ({ ...current, receiverId: selectedReceiverId }));
+    }
+  }, [manualForm.receiverId, manualForm.senderId, selectedReceiverId, selectedSenderId]);
+
   const updateManualField = (field, value) => {
     setManualForm((current) => ({
       ...current,
       [field]: value
     }));
   };
-
-  useEffect(() => {
-    if (!manualForm.senderId && selectedSenderId) {
-      setManualForm((current) => ({
-        ...current,
-        senderId: selectedSenderId
-      }));
-    }
-
-    if (!manualForm.receiverId && selectedReceiverId) {
-      setManualForm((current) => ({
-        ...current,
-        receiverId: selectedReceiverId
-      }));
-    }
-  }, [manualForm.receiverId, manualForm.senderId, selectedReceiverId, selectedSenderId]);
 
   const submitManual = () => {
     onManualSubmit({
@@ -75,7 +74,7 @@ export const TransactionControls = ({
         <div>
           <h2 className="text-base font-semibold text-gray-900">Transaction Controls</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Run automated scenarios for selected users or submit a manual transaction.
+            Simulate anomaly scenarios, batch attacks, or submit a manual payment for investigation.
           </p>
         </div>
         <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
@@ -99,7 +98,7 @@ export const TransactionControls = ({
       </div>
 
       {activeTab === "automated" ? (
-        <div className="grid gap-4 lg:grid-cols-[1fr,1fr,auto]">
+        <div className="grid gap-4 xl:grid-cols-4">
           <div>
             <label className="mb-1.5 block text-sm text-gray-500">Sender</label>
             <select
@@ -128,20 +127,89 @@ export const TransactionControls = ({
               ))}
             </select>
           </div>
-          <div className="flex items-end gap-2">
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-sm text-gray-500">Transaction amount</label>
+              <span className="text-xs text-gray-500">Rs. {autoForm.amount.toLocaleString()}</span>
+            </div>
+            <input
+              type="range"
+              min="500"
+              max="120000"
+              step="500"
+              value={autoForm.amount}
+              onChange={(event) =>
+                setAutoForm((current) => ({ ...current, amount: Number(event.target.value) }))
+              }
+              className="w-full accent-blue-600"
+            />
+          </div>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-sm text-gray-500">Burst simulation</label>
+              <span className="text-xs text-gray-500">{autoForm.burstCount} tx</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="8"
+              step="1"
+              value={autoForm.burstCount}
+              onChange={(event) =>
+                setAutoForm((current) => ({ ...current, burstCount: Number(event.target.value) }))
+              }
+              className="w-full accent-blue-600"
+            />
+          </div>
+
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-sm text-gray-500">Location jump distance</label>
+              <span className="text-xs text-gray-500">{autoForm.locationJumpDistance} km</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="3000"
+              step="100"
+              value={autoForm.locationJumpDistance}
+              onChange={(event) =>
+                setAutoForm((current) => ({
+                  ...current,
+                  locationJumpDistance: Number(event.target.value)
+                }))
+              }
+              className="w-full accent-blue-600"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              id="device-toggle"
+              type="checkbox"
+              checked={autoForm.deviceChange}
+              onChange={(event) =>
+                setAutoForm((current) => ({ ...current, deviceChange: event.target.checked }))
+              }
+              className="h-4 w-4 rounded border-gray-300 text-blue-600"
+            />
+            <label htmlFor="device-toggle" className="text-sm text-gray-700">
+              Simulate device change
+            </label>
+          </div>
+          <div className="xl:col-span-2 flex items-end gap-2">
             <button
-              onClick={() => onAutoSimulate("normal")}
+              onClick={() => onAutoSimulate("normal", autoForm)}
               disabled={simulating}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
             >
-              Normal
+              Run Normal Scenario
             </button>
             <button
-              onClick={() => onAutoSimulate("fraud")}
+              onClick={() => onAutoSimulate("fraud", autoForm)}
               disabled={simulating}
               className="rounded-lg border border-red-500 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
             >
-              Fraud
+              Run Attack Scenario
             </button>
           </div>
         </div>

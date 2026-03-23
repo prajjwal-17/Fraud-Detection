@@ -11,10 +11,16 @@ const riskLogSchema = new mongoose.Schema(
     mlScore: { type: Number, required: true },
     anomalyScore: { type: Number, default: 0 },
     ruleSignals: [{ type: String }],
+    priority: {
+      type: String,
+      enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+      default: "MEDIUM"
+    },
     finalRiskScore: { type: Number, required: true },
     decision: { type: String, required: true },
     topFactors: [{ type: String }],
     latencyMs: { type: Number, default: 0 },
+    degradedMode: { type: Boolean, default: false },
     audit: { type: Object, default: {} }
   },
   { timestamps: true }

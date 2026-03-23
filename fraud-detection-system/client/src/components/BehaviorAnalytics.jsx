@@ -4,7 +4,7 @@ const riskTone = (value) => {
   return "text-safe";
 };
 
-export const BehaviorAnalytics = ({ users, loading = false }) => (
+export const BehaviorAnalytics = ({ users, loading = false, onSelectUser }) => (
   <div className="panel h-[430px] overflow-auto rounded-lg p-4">
     <div className="mb-4">
       <h2 className="text-base font-semibold text-text">User Behavior Analytics</h2>
@@ -21,7 +21,11 @@ export const BehaviorAnalytics = ({ users, loading = false }) => (
         : null}
       {!loading &&
         users.map((user) => (
-          <div key={user.id} className="rounded-lg border border-line p-3">
+          <button
+            key={user.id}
+            onClick={() => onSelectUser?.(user.id)}
+            className="w-full rounded-lg border border-line p-3 text-left transition hover:bg-gray-50"
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-text">{user.name}</p>
@@ -45,7 +49,7 @@ export const BehaviorAnalytics = ({ users, loading = false }) => (
               <span>Average amount</span>
               <span>Rs. {Math.round(user.averageAmount).toLocaleString()}</span>
             </div>
-          </div>
+          </button>
         ))}
       {!loading && users.length === 0 ? (
         <p className="text-sm text-muted">No user risk profiles available yet.</p>

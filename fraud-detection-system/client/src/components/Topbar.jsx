@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, UserCircle2 } from "lucide-react";
 
-export const Topbar = ({ simulating, onSimulate }) => {
+export const Topbar = ({ simulating, onSimulate, title = "Dashboard", subtitle }) => {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -24,9 +24,9 @@ export const Topbar = ({ simulating, onSimulate }) => {
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+          <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Monitor real-time payment risk, fraud signals, and user behavior.
+            {subtitle || "Monitor real-time payment risk, fraud signals, and user behavior."}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

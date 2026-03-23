@@ -16,7 +16,7 @@ const getLocationLabel = (location) => {
   return "Unknown location";
 };
 
-export const Table = ({ rows, loading = false }) => (
+export const Table = ({ rows, loading = false, onRowClick }) => (
   <div className="panel flex h-[430px] flex-col rounded-lg p-4">
     <div className="mb-4">
       <h2 className="text-base font-semibold text-text">Live Transaction Feed</h2>
@@ -49,7 +49,11 @@ export const Table = ({ rows, loading = false }) => (
               : null}
             {!loading &&
               rows.map((row) => (
-                <tr key={row.id || row.transactionId} className="hover:bg-gray-50">
+                <tr
+                  key={row.id || row.transactionId}
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => onRowClick?.(row.id || row.transactionId)}
+                >
                   <td className="px-4 py-3 text-text">{getParticipantLabel(row.sender)}</td>
                   <td className="px-4 py-3 text-text">{getParticipantLabel(row.receiver)}</td>
                   <td className="px-4 py-3 text-text">Rs. {row.amount.toLocaleString()}</td>

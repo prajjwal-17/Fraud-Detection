@@ -22,6 +22,11 @@ const transactionSchema = new mongoose.Schema(
     },
     mlScore: { type: Number, default: 0 },
     finalRiskScore: { type: Number, default: 0 },
+    priority: {
+      type: String,
+      enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+      default: "MEDIUM"
+    },
     decision: {
       type: String,
       enum: ["SAFE", "SUSPICIOUS", "FRAUD"],

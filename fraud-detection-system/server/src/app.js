@@ -41,7 +41,7 @@ export const createApp = () => {
   app.use("/api/dashboard", dashboardRoutes);
 
   app.use((error, _req, res, _next) => {
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       message: error.message || "Internal server error"
     });
   });

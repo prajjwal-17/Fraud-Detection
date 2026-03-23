@@ -11,6 +11,9 @@ import { cacheRecentTransaction } from "../config/redis.js";
 import { deriveAlerts } from "./alert.service.js";
 import { broadcastRiskEvent } from "./socket.service.js";
 import { logger } from "../config/logger.js";
+import { createOrUpdateCase } from "./case.service.js";
+import { logOpsEvent } from "./opsEvent.service.js";
+import { enforceTransactionRateLimit } from "./security.service.js";
 
 const ruleWeightMap = {
   HIGH_VALUE_ANOMALY: 18,
@@ -31,6 +34,13 @@ const statusFromDecision = (decision) => {
   return "processed";
 };
 
+const classifyPriority = (score, decision) => {
+  if (decision === "FRAUD" && score >= 90) return "CRITICAL";
+  if (decision === "FRAUD" || score >= 70) return "HIGH";
+  if (decision === "SUSPICIOUS" || score >= 40) return "MEDIUM";
+  return "LOW";
+};
+
 export const processTransaction = async ({
   senderId,
   receiverId,
@@ -48,11 +58,19 @@ export const processTransaction = async ({
     throw new Error("Sender or receiver not found");
   }
 
+  await enforceTransactionRateLimit({ senderId: sender._id });
+
   const behaviorFeatures = await buildBehaviorFeatures({
     sender,
     amount,
     deviceId,
     location
+  });
+
+  const repeatedPairCount = await Transaction.countDocuments({
+    sender: sender._id,
+    receiver: receiver._id,
+    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
   });
 
   const ruleSignals = [];
@@ -68,6 +86,9 @@ export const processTransaction = async ({
   if (behaviorFeatures.location_deviation_km > 250) {
     ruleSignals.push("LOCATION_DRIFT");
   }
+  if (repeatedPairCount >= 3) {
+    ruleSignals.push("REPEATED_PAIR_ACTIVITY");
+  }
 
   const startedAt = performance.now();
   let mlResponse = {
@@ -75,6 +96,7 @@ export const processTransaction = async ({
     anomaly_score: 0.1,
     top_factors: []
   };
+  let degradedMode = false;
 
   try {
     mlResponse = await predictFraud({
@@ -87,9 +109,19 @@ export const processTransaction = async ({
       behavior_features: behaviorFeatures
     });
   } catch (error) {
+    degradedMode = true;
     logger.warn({
       message: "ML prediction failed, using rule-only fallback",
       error: error.message
+    });
+    await logOpsEvent({
+      type: "ML_DEGRADED_MODE",
+      severity: "ERROR",
+      message: "ML scoring unavailable, fallback to rules-based scoring",
+      userId: sender._id,
+      metadata: {
+        error: error.message
+      }
     });
   }
 
@@ -103,8 +135,37 @@ export const processTransaction = async ({
     Math.round(mlResponse.fraud_probability * 65 + rulesContribution)
   );
   const decision = classifyDecision(finalRiskScore);
+  const priority = classifyPriority(finalRiskScore, decision);
   const status = statusFromDecision(decision);
   const latencyMs = Math.round(performance.now() - startedAt);
+  const explanation = [
+    {
+      label: "Amount vs baseline",
+      weight: Math.min(100, Math.round(behaviorFeatures.amount_delta_ratio * 18)),
+      baseline: sender.profile?.averageAmount || 0,
+      observed: amount
+    },
+    {
+      label: "Hourly velocity",
+      weight: Math.min(100, behaviorFeatures.velocity_1h * 14),
+      baseline: 1,
+      observed: behaviorFeatures.velocity_1h
+    },
+    {
+      label: "Location deviation",
+      weight: Math.min(100, Math.round(behaviorFeatures.location_deviation_km / 6)),
+      baseline: 0,
+      observed: behaviorFeatures.location_deviation_km
+    },
+    {
+      label: "Device trust mismatch",
+      weight: behaviorFeatures.device_mismatch ? 78 : 10,
+      baseline: 0,
+      observed: behaviorFeatures.device_mismatch
+    }
+  ]
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 4);
 
   const transaction = await Transaction.create({
     sender: sender._id,
@@ -115,6 +176,7 @@ export const processTransaction = async ({
     location,
     mlScore: mlResponse.fraud_probability,
     finalRiskScore,
+    priority,
     decision,
     rulesTriggered: ruleSignals,
     status
@@ -126,13 +188,23 @@ export const processTransaction = async ({
     mlScore: mlResponse.fraud_probability,
     anomalyScore: mlResponse.anomaly_score,
     ruleSignals,
+    priority,
     finalRiskScore,
     decision,
     topFactors: mlResponse.top_factors,
     latencyMs,
+    degradedMode,
     audit: {
       behaviorFeatures,
-      mode
+      mode,
+      repeatedPairCount,
+      explanation,
+      baselineComparison: {
+        averageAmount: sender.profile?.averageAmount || 0,
+        observedAmount: amount,
+        trustedDevices: sender.trustedDevices || [],
+        lastKnownCity: sender.homeLocation?.city || "Unknown"
+      }
     }
   });
 
@@ -170,7 +242,17 @@ export const processTransaction = async ({
     amount,
     behaviorFeatures,
     rulesTriggered: ruleSignals,
-    decision
+    decision,
+    priority
+  });
+
+  await createOrUpdateCase({
+    transaction,
+    sender,
+    finalRiskScore,
+    mlScore: mlResponse.fraud_probability,
+    decision,
+    priority
   });
 
   const payload = {
@@ -179,11 +261,14 @@ export const processTransaction = async ({
     receiver: { id: receiver._id, name: receiver.name },
     amount,
     decision,
+    priority,
     status,
     finalRiskScore,
     mlScore: mlResponse.fraud_probability,
     rulesTriggered: ruleSignals,
     topFactors: mlResponse.top_factors,
+    explanation,
+    degradedMode,
     behaviorFeatures,
     alerts,
     createdAt: transaction.createdAt,

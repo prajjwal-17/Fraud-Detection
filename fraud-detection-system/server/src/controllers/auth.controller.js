@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { User } from "../models/User.js";
 import { signToken } from "../utils/jwt.js";
+import { recordLoginAttempt } from "../services/security.service.js";
 
 export const register = async (req, res, next) => {
   try {
@@ -36,16 +37,20 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
     const user = await User.findOne({ email });
     if (!user) {
+      await recordLoginAttempt({ email, ip, success: false });
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      await recordLoginAttempt({ email, ip, success: false });
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    await recordLoginAttempt({ email, ip, success: true });
     const token = signToken({ sub: user._id, role: user.role });
     res.json({
       token,

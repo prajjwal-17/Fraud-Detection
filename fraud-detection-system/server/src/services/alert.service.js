@@ -1,4 +1,4 @@
-export const deriveAlerts = ({ amount, behaviorFeatures, rulesTriggered, decision }) => {
+export const deriveAlerts = ({ amount, behaviorFeatures, rulesTriggered, decision, priority }) => {
   const alerts = [];
 
   if (amount > 50000 && behaviorFeatures.amount_delta_ratio > 3) {
@@ -15,6 +15,10 @@ export const deriveAlerts = ({ amount, behaviorFeatures, rulesTriggered, decisio
 
   if (decision === "FRAUD" || rulesTriggered.length >= 2) {
     alerts.push("Manual review required");
+  }
+
+  if (priority === "CRITICAL") {
+    alerts.push("Critical fraud priority queue");
   }
 
   return alerts;
