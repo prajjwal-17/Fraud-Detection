@@ -1,4 +1,14 @@
 .venv/
+node_modules/
+dist/
+build/
+.env
 __pycache__/
 *.pyc
-.env
+*.pyo
+*.pyd
+.DS_Store
+coverage/
+models/*.joblib
+models/*.json
+client/.vite/
