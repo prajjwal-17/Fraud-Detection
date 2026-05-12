@@ -12,25 +12,39 @@ import { env } from "./config/env.js";
 import { getRedisStatus } from "./config/redis.js";
 import { initializeSocket } from "./services/socket.service.js";
 
+const vercelPreviewPattern = /^https:\/\/fraud-detection(?:-[a-z0-9-]+)*\.vercel\.app$/;
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) {
+    return true;
+  }
+
+  return env.clientUrls.includes(origin) || vercelPreviewPattern.test(origin);
+};
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  },
+  credentials: true
+};
+
 export const createApp = () => {
   const app = express();
   const server = http.createServer(app);
   const io = new Server(server, {
-    cors: {
-      origin: env.clientUrl,
-      credentials: true
-    }
+    cors: corsOptions
   });
 
   initializeSocket(io);
 
   app.use(helmet());
-  app.use(
-    cors({
-      origin: env.clientUrl,
-      credentials: true
-    })
-  );
+  app.use(cors(corsOptions));
   app.use(express.json());
   app.use(morgan("dev"));
 
