@@ -24,3 +24,21 @@ services:
         sync: false
       - key: LOG_LEVEL
         value: info
+
+  - type: web
+    name: fraud-detection-ml-service
+    runtime: python
+    rootDir: ml-service
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: MODEL_PATH
+        value: models/fraud_model.joblib
+      - key: METRICS_PATH
+        value: models/model_metrics.json
+      - key: DATA_PATH
+        value: data/sample_transactions.csv
