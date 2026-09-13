@@ -125,15 +125,29 @@ export const processTransaction = async ({
     });
   }
 
-  const rulesContribution = ruleSignals.reduce(
-    (sum, signal) => sum + (ruleWeightMap[signal] || 8),
-    0
-  );
+// Calculate the raw rule score
+const rawRuleScore = ruleSignals.reduce(
+  (sum, signal) => sum + (ruleWeightMap[signal] || 8),
+  0
+);
 
-  const finalRiskScore = Math.min(
-    100,
-    Math.round(mlResponse.fraud_probability * 65 + rulesContribution)
-  );
+// Maximum possible rule score
+const maxRuleScore =
+  Object.values(ruleWeightMap).reduce((sum, weight) => sum + weight, 0) + 8;
+
+// Normalize rule contribution to a maximum of 35 points
+const normalizedRuleScore =
+  maxRuleScore > 0
+    ? (rawRuleScore / maxRuleScore) * 35
+    : 0;
+
+// ML contributes up to 65 points
+const mlContribution = mlResponse.fraud_probability * 65;
+
+// Final score is naturally bounded between 0 and 100
+const finalRiskScore = Math.round(
+  mlContribution + normalizedRuleScore
+);
   const decision = classifyDecision(finalRiskScore);
   const priority = classifyPriority(finalRiskScore, decision);
   const status = statusFromDecision(decision);
